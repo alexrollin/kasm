@@ -18,7 +18,7 @@ fi
 # Prompt user for additional software list via GUI
 software_list=$(zenity --entry \
     --title="Software Installer" \
-    --text="Enter a comma-separated list of additional software (e.g., fish, nano).\nWindsurf will be installed by default:" \
+    --text="Enter a comma-separated list of additional software (e.g., fish, nano).\nWindsurf will be installed by default with Kasm fixes:" \
     --width=400)
 
 # Exit if canceled
@@ -62,6 +62,24 @@ sudo apt-get install -y windsurf || {
 }
 kill $windsurf_pid 2>/dev/null
 
+# Step 4: Modify Windsurf script for Kasm (add --no-sandbox)
+zenity --info --text="Configuring Windsurf for Kasm (adding --no-sandbox)..." --title="Progress" --no-cancel &
+config_pid=$!
+sudo sed -i 's|ELECTRON_RUN_AS_NODE=1 "$ELECTRON" "$CLI" "$@"|ELECTRON_RUN_AS_NODE=1 "$ELECTRON" "$CLI" --no-sandbox "$@"|' /usr/share/windsurf/bin/windsurf || {
+    kill $config_pid
+    zenity --warning --text="Failed to modify Windsurf script. Manual fix needed." --title="Warning"
+}
+kill $config_pid 2>/dev/null
+
+# Step 5: Update .desktop file to use %U
+zenity --info --text="Updating Windsurf desktop file..." --title="Progress" --no-cancel &
+desktop_pid=$!
+sudo sed -i 's|Exec=/usr/share/windsurf/bin/windsurf %F|Exec=/usr/share/windsurf/bin/windsurf %U|' /usr/share/applications/windsurf.desktop || {
+    kill $desktop_pid
+    zenity --warning --text="Failed to update .desktop file. Manual fix needed." --title="Warning"
+}
+kill $desktop_pid 2>/dev/null
+
 # Install additional software from user input (if provided)
 if [ -n "$software_list" ]; then
     IFS=',' read -r -a software_array <<< "$software_list"
@@ -80,4 +98,4 @@ if [ -n "$software_list" ]; then
 fi
 
 # Success message
-zenity --info --text="Installation complete! Windsurf and any additional software are installed." --title="Success"
+zenity --info --text="Installation complete!\nWindsurf is installed and configured for Kasm.\nLaunch it from the menu or terminal." --title="Success"
