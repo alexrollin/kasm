@@ -3,7 +3,7 @@
 # How This Script Works and How to Update It:
 # - Purpose: This script installs or removes software on a Kasm Ubuntu system, with a GUI for installs and CLI options for removal.
 # - Usage:
-#   - Install: Run './install_software_gui.sh' to launch a GUI where you type a comma-separated list of software (e.g., 'fish, nano'). Windsurf is installed by default with Kasm-specific fixes (--no-sandbox and %U in .desktop).
+#   - Install: Run './install_software_gui.sh' to launch a GUI where you type a comma-separated list of software (e.g., 'fish, nano'). Windsurf is installed by default with Kasm-specific fixes (--no-sandbox and %U in .desktop). If 'fish' is included, it’s enhanced with lazy tweaks.
 #   - Remove: Run './install_software_gui.sh r-<software>' to remove a specific software (e.g., './install_software_gui.sh r-windsurf' removes Windsurf).
 # - Structure:
 #   - Removal functions (e.g., remove_windsurf) are defined first. Add new ones for each software following the same pattern.
@@ -103,7 +103,7 @@ fi
 # Prompt user for additional software list via GUI
 software_list=$(zenity --entry \
     --title="Software Installer" \
-    --text="Enter a comma-separated list of software (e.g., fish, nano, makeself).\nWindsurf will be installed by default with Kasm fixes.\nUse './install_software_gui.sh r-<software>' to remove (e.g., 'r-windsurf', 'r-makeself')." \
+    --text="Enter a comma-separated list of software (e.g., fish, nano, makeself).\nWindsurf will be installed by default with Kasm fixes.\nIf 'fish' is included, it will be enhanced with lazy tweaks.\nUse './install_software_gui.sh r-<software>' to remove (e.g., 'r-windsurf', 'r-makeself')." \
     --width=400)
 
 # Exit if canceled
@@ -178,9 +178,26 @@ if [ -n "$software_list" ]; then
                 zenity --warning --text="Failed to install $software. It might not exist or need a custom repo." --title="Warning"
             }
             kill $install_pid 2>/dev/null
-        fi
-    done
-fi
 
-# Success message
-zenity --info --text="Installation complete!\nWindsurf and requested software installed.\nLaunch Windsurf from the menu or terminal.\nUse './install_software_gui.sh r-<software>' to remove (e.g., 'r-windsurf', 'r-makeself')." --title="Success"
+            # Special handling for Fish enhancements
+            if [ "$software" = "fish" ]; then
+                zenity --info --text="Enhancing Fish with lazy tweaks..." --title="Progress" --no-cancel &
+                fish_pid=$!
+                # Install dependencies
+                sudo apt-get install -y xclip xsel fzf || echo -e "${RED}Failed to install Fish dependencies.${NC}"
+                # Set Fish as default shell for root
+                sudo chsh -s /usr/bin/fish || echo -e "${RED}Failed to set Fish as default shell.${NC}"
+                # Create config directory if needed
+                mkdir -p /root/.config/fish
+                # Write enhanced config
+                cat << 'EOF' > /root/.config/fish/config.fish
+# Force instant paste
+bind \cv 'commandline -i (pbpaste 2>/dev/null || xclip -o 2>/dev/null || xsel -o 2>/dev/null)'
+
+# Enhance completions
+complete -c '' -f -a '(find /root /home/kasm-user /usr/bin -maxdepth 1 -type f -executable)' --description 'All executables'
+set -g fish_autosuggestion_delay 100
+
+# Lazy aliases
+alias i='apt install -y'
+alias r
