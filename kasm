@@ -192,4 +192,4 @@ EOF"
 done
 
 # Success message
-sudo -E zenity --info --text="Installation complete!\nRequested software installed.\nIf Windsurf was included, it’s configured for Kasm.\nIf Fish was included, it’s enhanced for root laziness.\nUse './install_software_gui.sh r-<software>' to remove." --title="Success"
+sudo -E zenity --info --text="Installation complete!\nRequested software installed.\nIf Windsurf was included, it’s configured for Kasm.\nIf Fish was included, it’s enhanced for root laziness.\nUse 'kasm r-<software>' to remove." --title="Success"
